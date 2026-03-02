@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? 슬롯머신!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #FFF5E4, #FFD1DC, #E8D5FF, #D4F1F9);
+            background-size: 400% 400%;
+            animation: bg-shift 12s ease infinite;
+            min-height: 100vh; min-height: 100dvh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'Jua', 'Segoe UI', sans-serif;
+            overflow-x: hidden; position: relative; padding: 20px 10px;
+        }
+        @keyframes bg-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .food-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+        .food-emoji { position: absolute; font-size: 2.5rem; opacity: 0.25; animation: float-around linear infinite; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+        @keyframes float-around {
+            0% { transform: translateY(0) rotate(0deg) scale(1); }
+            25% { transform: translateY(-20px) rotate(10deg) scale(1.05); }
+            50% { transform: translateY(0) rotate(0deg) scale(1); }
+            75% { transform: translateY(20px) rotate(-10deg) scale(0.95); }
+            100% { transform: translateY(0) rotate(0deg) scale(1); }
+        }
+
+        .content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 620px; }
+        h1 { color: #7B5EA7; font-size: 2.8rem; margin-bottom: 6px; text-shadow: 0 2px 10px rgba(123,94,167,0.2); letter-spacing: 2px; }
+        .subtitle { color: #B08BBF; font-size: 1.1rem; margin-bottom: 28px; letter-spacing: 1px; }
+
+        .sound-toggle { position: fixed; top: 16px; right: 16px; z-index: 50; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); border: 2px solid #F0D0E0; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 10px rgba(248,180,200,0.2); }
+        .sound-toggle:hover { transform: scale(1.1); }
+        .sound-toggle.muted { opacity: 0.5; }
+
+        .machine { background: linear-gradient(180deg, #fff, #FFF5F5); border: 3px solid #F8B4C8; border-radius: 28px; padding: 28px 36px; box-shadow: 0 8px 40px rgba(248,180,200,0.3), 0 2px 10px rgba(0,0,0,0.05), inset 0 0 30px rgba(255,255,255,0.5); }
+        .slots-row { display: flex; gap: 12px; align-items: center; justify-content: center; }
+        .slot-window { width: 160px; height: 240px; background: linear-gradient(180deg, #FFF9F0, #FFF0F5); border-radius: 18px; border: 2px solid #F0D0E0; overflow: hidden; position: relative; }
+        .slot-window::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 64px; transform: translateY(-50%); border-top: 2.5px solid #FF8FAB; border-bottom: 2.5px solid #FF8FAB; background: rgba(255,143,171,0.08); z-index: 5; pointer-events: none; }
+        .slot-window::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(255,249,240,0.95) 0%, rgba(255,249,240,0.3) 20%, transparent 35%, transparent 65%, rgba(255,249,240,0.3) 80%, rgba(255,249,240,0.95) 100%); z-index: 4; pointer-events: none; }
+        .slot-strip { position: absolute; width: 100%; left: 0; }
+        .slot-item { height: 64px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 1.1rem; font-weight: bold; color: #5A4478; border-bottom: 1px solid rgba(200,180,220,0.15); padding: 0 6px; text-align: center; }
+        .slot-item .item-emoji { font-size: 1.3rem; }
+        .arrow-left, .arrow-right { font-size: 1.6rem; color: #FF8FAB; text-shadow: 0 0 10px rgba(255,143,171,0.4); animation: arrow-pulse 1s ease-in-out infinite alternate; }
+        @keyframes arrow-pulse { from { opacity: 0.4; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+
+        .spin-btn { margin-top: 28px; background: linear-gradient(135deg, #FF8FAB, #FFB1C8, #D4A5FF); color: #fff; border: none; padding: 16px 65px; font-size: 1.6rem; font-family: 'Jua', sans-serif; font-weight: bold; border-radius: 50px; cursor: pointer; transition: all 0.3s; box-shadow: 0 6px 25px rgba(255,143,171,0.4); letter-spacing: 3px; }
+        .spin-btn:hover { transform: scale(1.08) translateY(-2px); box-shadow: 0 10px 35px rgba(255,143,171,0.5); }
+        .spin-btn:active { transform: scale(0.98); }
+        .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: scale(1); }
+
+        .result-box { margin-top: 20px; padding: 12px 36px; background: rgba(255,255,255,0.6); border-radius: 20px; border: 2px solid rgba(248,180,200,0.3); color: #B08BBF; font-size: 1.1rem; min-height: 55px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); transition: all 0.5s; text-align: center; }
+        .result-box.show { background: rgba(255,255,255,0.85); border-color: #FF8FAB; box-shadow: 0 4px 25px rgba(255,143,171,0.2); color: #5A4478; }
+        .result-box .menu-name { font-size: 1.8rem; font-weight: bold; color: #E75480; }
+
+        .confetti { position: fixed; border-radius: 50%; pointer-events: none; z-index: 100; animation: confetti-fall linear forwards; }
+        @keyframes confetti-fall { 0% { opacity: 1; transform: translateY(0) rotate(0deg); } 100% { opacity: 0; transform: translateY(100vh) rotate(720deg); } }
+        .jackpot-flash { animation: jackpot 0.4s ease-in-out 3; }
+        @keyframes jackpot { 0%, 100% { box-shadow: 0 8px 40px rgba(248,180,200,0.3); } 50% { box-shadow: 0 8px 60px rgba(255,143,171,0.5), 0 0 80px rgba(212,165,255,0.3); } }
+
+        /* Next 버튼 */
+        .next-btn { display: none; margin-top: 16px; background: linear-gradient(135deg, #A78BFA, #C084FC, #E879F9); color: #fff; border: none; padding: 13px 55px; font-size: 1.3rem; font-family: 'Jua', sans-serif; font-weight: bold; border-radius: 50px; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 20px rgba(167,139,250,0.4); letter-spacing: 2px; }
+        .next-btn.visible { display: inline-block; animation: pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .next-btn:hover { transform: scale(1.06) translateY(-2px); }
+        .next-btn:active { transform: scale(0.97); }
+        @keyframes pop-in { 0% { opacity: 0; transform: scale(0.5) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+
+        /* 선택지 */
+        .choice-area { display: none; margin-top: 16px; gap: 12px; width: 100%; max-width: 420px; }
+        .choice-area.show { display: flex; animation: pop-in 0.4s ease-out forwards; }
+        .choice-btn { flex: 1; padding: 16px 10px; border: 2.5px solid #F0D0E0; border-radius: 20px; background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: 'Jua', sans-serif; }
+        .choice-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 25px rgba(248,180,200,0.35); border-color: #FF8FAB; }
+        .choice-btn:active { transform: scale(0.97); }
+        .choice-btn .choice-icon { font-size: 2rem; }
+        .choice-btn .choice-label { font-size: 1.05rem; color: #5A4478; font-weight: bold; }
+        .choice-btn .choice-desc { font-size: 0.78rem; color: #B08BBF; }
+
+        /* 레시피 */
+        .recipe-area { display: none; margin-top: 16px; width: 100%; max-width: 480px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: 2.5px solid #F0D0E0; border-radius: 24px; padding: 24px 22px; text-align: left; }
+        .recipe-area.show { display: block; animation: pop-in 0.4s ease-out forwards; }
+        .recipe-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #F8E0EC; }
+        .recipe-header .recipe-emoji { font-size: 2.2rem; }
+        .recipe-header .recipe-title { font-size: 1.4rem; color: #E75480; font-weight: bold; }
+        .recipe-header .recipe-subtitle { font-size: 0.85rem; color: #B08BBF; }
+        .recipe-section-title { font-size: 1.05rem; color: #7B5EA7; font-weight: bold; margin: 14px 0 8px 0; display: flex; align-items: center; gap: 6px; }
+        .recipe-list { list-style: none; padding: 0; margin: 0; }
+        .recipe-list li { padding: 5px 0 5px 22px; position: relative; font-size: 0.95rem; color: #5A4478; line-height: 1.6; }
+        .recipe-list li::before { content: ''; position: absolute; left: 4px; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: #FFB3D9; }
+        .recipe-list.steps { counter-reset: step; }
+        .recipe-list.steps li { counter-increment: step; padding-left: 30px; }
+        .recipe-list.steps li::before { content: counter(step); background: #A78BFA; color: #fff; width: 20px; height: 20px; border-radius: 50%; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; top: 8px; left: 0; }
+        .recipe-back-btn { margin-top: 18px; width: 100%; padding: 11px; border: 2px solid #E0D0F0; border-radius: 14px; background: #F8F0FF; color: #7B5EA7; font-family: 'Jua', sans-serif; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+        .recipe-back-btn:hover { background: #EEE0FF; border-color: #C0A0E0; }
+
+        .edit-link { margin-top: 14px; color: #C0A0D0; font-size: 0.9rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+        .edit-link:hover { color: #9B6FB8; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(90,68,120,0.4); backdrop-filter: blur(6px); z-index: 200; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: #FFF8FA; border-radius: 24px; padding: 30px; width: 90%; max-width: 400px; color: #5A4478; border: 2px solid #F0D0E0; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        .modal h2 { margin-bottom: 10px; color: #E75480; font-size: 1.4rem; }
+        .modal p { color: #B08BBF; font-size: 0.95rem; margin-bottom: 15px; }
+        .modal textarea { width: 100%; height: 200px; background: #FFF0F5; border: 2px solid #F0D0E0; border-radius: 14px; color: #5A4478; padding: 12px; font-size: 1rem; font-family: 'Jua', sans-serif; resize: vertical; }
+        .modal textarea:focus { outline: none; border-color: #FF8FAB; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+        .modal-buttons button { flex: 1; padding: 12px; border: none; border-radius: 14px; font-size: 1rem; cursor: pointer; font-weight: bold; font-family: 'Jua', sans-serif; }
+        .btn-save { background: linear-gradient(135deg, #FF8FAB, #D4A5FF); color: #fff; }
+        .btn-cancel { background: #F0E0F0; color: #B08BBF; }
+
+        /* 모바일 (가로 배치 유지) */
+        @media (max-width: 580px) {
+            body { padding: 16px 6px; justify-content: flex-start; padding-top: 28px; }
+            h1 { font-size: 1.9rem; margin-bottom: 2px; }
+            .subtitle { font-size: 0.85rem; margin-bottom: 16px; }
+            .machine { padding: 14px 10px; border-radius: 20px; width: calc(100% - 4px); }
+            .slots-row { gap: 6px; }
+            .slot-window { width: calc((100vw - 90px) / 3); max-width: 130px; height: 180px; border-radius: 14px; }
+            .slot-window::before { height: 50px; }
+            .slot-item { height: 50px; font-size: 0.75rem; gap: 3px; padding: 0 3px; }
+            .slot-item .item-emoji { font-size: 1rem; }
+            .arrow-left, .arrow-right { font-size: 1.1rem; }
+            .spin-btn { margin-top: 18px; padding: 13px 45px; font-size: 1.3rem; letter-spacing: 2px; }
+            .result-box { margin-top: 14px; padding: 10px 16px; font-size: 0.95rem; min-height: 46px; }
+            .result-box .menu-name { font-size: 1.4rem; }
+            .sound-toggle { top: 10px; right: 10px; width: 38px; height: 38px; font-size: 1.1rem; }
+            .next-btn { padding: 12px 45px; font-size: 1.15rem; }
+            .choice-area { max-width: 100%; gap: 8px; }
+            .choice-btn { padding: 14px 8px; border-radius: 16px; }
+            .choice-btn .choice-icon { font-size: 1.6rem; }
+            .choice-btn .choice-label { font-size: 0.92rem; }
+            .choice-btn .choice-desc { font-size: 0.7rem; }
+            .recipe-area { max-width: 100%; padding: 18px 16px; border-radius: 20px; }
+            .recipe-header .recipe-title { font-size: 1.2rem; }
+            .edit-link { margin-bottom: 20px; }
+        }
+        @media (max-width: 380px) {
+            h1 { font-size: 1.6rem; }
+            .subtitle { font-size: 0.78rem; margin-bottom: 12px; }
+            .machine { padding: 10px 6px; }
+            .slots-row { gap: 4px; }
+            .slot-window { width: calc((100vw - 70px) / 3); max-width: 105px; height: 150px; border-radius: 12px; }
+            .slot-window::before { height: 42px; }
+            .slot-item { height: 42px; font-size: 0.65rem; gap: 2px; padding: 0 2px; }
+            .slot-item .item-emoji { font-size: 0.85rem; }
+            .arrow-left, .arrow-right { font-size: 0.9rem; }
+            .spin-btn { padding: 11px 35px; font-size: 1.1rem; }
+            .result-box .menu-name { font-size: 1.2rem; }
+            .choice-btn .choice-icon { font-size: 1.4rem; }
+            .choice-btn .choice-label { font-size: 0.82rem; }
+            .choice-btn { padding: 12px 6px; }
+            .recipe-area { padding: 14px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔊</div>
+    <div class="food-bg" id="foodBg"></div>
+
+    <div class="content">
+        <h1>오늘 뭐 먹지?</h1>
+        <p class="subtitle">레버를 당겨서 오늘의 메뉴를 뽑아보자!</p>
+
+        <div class="machine" id="machine">
+            <div class="slots-row">
+                <span class="arrow-right">▶</span>
+                <div class="slot-window" id="slotWindow0"><div class="slot-strip" id="strip0"></div></div>
+                <div class="slot-window" id="slotWindow1"><div class="slot-strip" id="strip1"></div></div>
+                <div class="slot-window" id="slotWindow2"><div class="slot-strip" id="strip2"></div></div>
+                <span class="arrow-left">◀</span>
+            </div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn" onclick="spin()">당겨!</button>
+        <div class="result-box" id="resultBox">버튼을 눌러서 돌려보세요!</div>
+
+        <button class="next-btn" id="nextBtn" onclick="showChoices()">Next →</button>
+
+        <div class="choice-area" id="choiceArea">
+            <div class="choice-btn" onclick="showRecipe()">
+                <span class="choice-icon">👨‍🍳</span>
+                <span class="choice-label">직접 만들어 먹기</span>
+                <span class="choice-desc">레시피 보기</span>
+            </div>
+            <div class="choice-btn" onclick="searchNearby()">
+                <span class="choice-icon">🗺️</span>
+                <span class="choice-label">근처 음식점 찾기</span>
+                <span class="choice-desc">네이버 지도로 검색</span>
+            </div>
+        </div>
+
+        <div class="recipe-area" id="recipeArea"></div>
+        <div class="edit-link" onclick="openModal()">메뉴 수정하기</div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>메뉴 수정</h2>
+            <p>한 줄에 하나씩 메뉴를 적어줘! 추가하거나 빼도 돼.</p>
+            <textarea id="menuTextarea"></textarea>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal()">취소</button>
+                <button class="btn-save" onclick="saveMenus()">저장!</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 사운드 =====
+        let audioCtx = null, soundEnabled = true, tickInterval = null;
+        function getAudioCtx() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); return audioCtx; }
+        function toggleSound() { soundEnabled = !soundEnabled; const b = document.getElementById('soundToggle'); b.textContent = soundEnabled ? '🔊' : '🔇'; b.classList.toggle('muted', !soundEnabled); }
+
+        function playTick() { if (!soundEnabled) return; const c = getAudioCtx(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.setValueAtTime(800 + Math.random() * 400, c.currentTime); g.gain.setValueAtTime(0.08, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.04); o.start(c.currentTime); o.stop(c.currentTime + 0.04); }
+        function startTickSound() { if (tickInterval) clearInterval(tickInterval); tickInterval = setInterval(playTick, 50); }
+        function slowTickSound(p) { if (tickInterval) clearInterval(tickInterval); tickInterval = setInterval(playTick, 50 + p * 250); }
+        function stopTickSound() { if (tickInterval) { clearInterval(tickInterval); tickInterval = null; } }
+
+        function playStopDing() { if (!soundEnabled) return; const c = getAudioCtx(), o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.setValueAtTime(1200, c.currentTime); o.frequency.exponentialRampToValueAtTime(800, c.currentTime + 0.15); g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.3); o.start(c.currentTime); o.stop(c.currentTime + 0.3); }
+
+        function playFanfare() {
+            if (!soundEnabled) return; const c = getAudioCtx();
+            [{f:523.25,s:0,d:0.15},{f:659.25,s:0.12,d:0.15},{f:783.99,s:0.24,d:0.15},{f:1046.5,s:0.36,d:0.4}].forEach(n => {
+                const o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'square'; o.frequency.setValueAtTime(n.f, c.currentTime + n.s); g.gain.setValueAtTime(0, c.currentTime + n.s); g.gain.linearRampToValueAtTime(0.15, c.currentTime + n.s + 0.02); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + n.s + n.d); o.start(c.currentTime + n.s); o.stop(c.currentTime + n.s + n.d + 0.05);
+                const o2 = c.createOscillator(), g2 = c.createGain(); o2.connect(g2); g2.connect(c.destination); o2.type = 'triangle'; o2.frequency.setValueAtTime(n.f * 2, c.currentTime + n.s); g2.gain.setValueAtTime(0, c.currentTime + n.s); g2.gain.linearRampToValueAtTime(0.06, c.currentTime + n.s + 0.02); g2.gain.exponentialRampToValueAtTime(0.001, c.currentTime + n.s + n.d * 0.8); o2.start(c.currentTime + n.s); o2.stop(c.currentTime + n.s + n.d + 0.05);
+            });
+            const bs = c.sampleRate * 0.3, bf = c.createBuffer(1, bs, c.sampleRate), bd = bf.getChannelData(0); for (let i = 0; i < bs; i++) bd[i] = (Math.random() * 2 - 1) * 0.5;
+            const ns = c.createBufferSource(); ns.buffer = bf; const ng = c.createGain(), nf = c.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.setValueAtTime(6000, c.currentTime); ns.connect(nf); nf.connect(ng); ng.connect(c.destination); ng.gain.setValueAtTime(0, c.currentTime + 0.36); ng.gain.linearRampToValueAtTime(0.08, c.currentTime + 0.38); ng.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.7); ns.start(c.currentTime + 0.36); ns.stop(c.currentTime + 0.75);
+        }
+
+        function playFireworks() {
+            if (!soundEnabled) return; const c = getAudioCtx();
+            function boom(st, int) {
+                const o = c.createOscillator(), g = c.createGain(); o.connect(g); g.connect(c.destination); o.type = 'sine'; o.frequency.setValueAtTime(150*int, c.currentTime+st); o.frequency.exponentialRampToValueAtTime(40, c.currentTime+st+0.3); g.gain.setValueAtTime(0.25*int, c.currentTime+st); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+st+0.4); o.start(c.currentTime+st); o.stop(c.currentTime+st+0.45);
+                const bl = c.sampleRate*0.5, bf = c.createBuffer(1,bl,c.sampleRate), bd = bf.getChannelData(0); for(let i=0;i<bl;i++) bd[i]=Math.random()*2-1; const n = c.createBufferSource(); n.buffer=bf; const ng=c.createGain(), bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.setValueAtTime(3000+Math.random()*3000,c.currentTime+st); bp.Q.setValueAtTime(0.8,c.currentTime+st); n.connect(bp); bp.connect(ng); ng.connect(c.destination); ng.gain.setValueAtTime(0,c.currentTime+st); ng.gain.linearRampToValueAtTime(0.12*int,c.currentTime+st+0.02); ng.gain.exponentialRampToValueAtTime(0.001,c.currentTime+st+0.45); n.start(c.currentTime+st); n.stop(c.currentTime+st+0.5);
+                const sp=c.createOscillator(),sg=c.createGain(); sp.connect(sg); sg.connect(c.destination); sp.type='sine'; sp.frequency.setValueAtTime(2000+Math.random()*2000,c.currentTime+st+0.05); sp.frequency.exponentialRampToValueAtTime(500,c.currentTime+st+0.5); sg.gain.setValueAtTime(0.04*int,c.currentTime+st+0.05); sg.gain.exponentialRampToValueAtTime(0.001,c.currentTime+st+0.5); sp.start(c.currentTime+st+0.05); sp.stop(c.currentTime+st+0.55);
+            }
+            boom(0,1); boom(0.25,0.7); boom(0.5,0.9); boom(0.85,0.6); boom(1.1,1);
+        }
+
+        // ===== 메뉴 & 이모지 =====
+        let menus = ["샐러드","갈비","피자","떡볶이","라면","김밥","치킨","잡채","집밥(엄마선택)","파스타","우동","계란볶음밥","짜장면","짬뽕","마라탕","돈까스","치킨텐더"];
+        const menuEmojis = {"샐러드":"🥗","갈비":"🥩","피자":"🍕","떡볶이":"🌶️","라면":"🍜","김밥":"🍙","치킨":"🍗","잡채":"🥘","집밥(엄마선택)":"🏠","파스타":"🍝","우동":"🍲","계란볶음밥":"🍳","짜장면":"🥢","짬뽕":"🦐","마라탕":"🔥","돈까스":"🥓","치킨텐더":"🍖"};
+        const defaultEmojis = ["🍔","🍟","🌮","🍣","🥟","🍰","🧁","🍩","🥐","🍱"];
+        function getEmoji(m) { return menuEmojis[m] || defaultEmojis[Math.abs(hashStr(m)) % defaultEmojis.length]; }
+        function hashStr(s) { let h=0; for(let i=0;i<s.length;i++) h=((h<<5)-h)+s.charCodeAt(i); return h; }
+        const colors = ["#FFB3BA","#FFCBA4","#FFE4A1","#BAFFC9","#BAE1FF","#D4BAFF","#FFB3D9","#A8E6CF","#FFD3B6","#C4FAF8","#F3C4FB","#B5D5FF","#A0D2DB","#FFC8DD","#CDB4DB","#BDE0FE","#F9C6D3","#FDE2A7","#A2D2FF","#CAFFBF"];
+
+        function getItemHeight() { return window.innerWidth <= 380 ? 42 : window.innerWidth <= 580 ? 50 : 64; }
+        function getWindowHeight() { return window.innerWidth <= 380 ? 150 : window.innerWidth <= 580 ? 180 : 240; }
+
+        let ITEM_HEIGHT = getItemHeight(), WINDOW_HEIGHT = getWindowHeight(), CENTER_OFFSET = (WINDOW_HEIGHT/2)-(ITEM_HEIGHT/2);
+        let spinning = false, currentSelectedMenu = '';
+
+        window.addEventListener('resize', () => { if (!spinning) { ITEM_HEIGHT = getItemHeight(); WINDOW_HEIGHT = getWindowHeight(); CENTER_OFFSET = (WINDOW_HEIGHT/2)-(ITEM_HEIGHT/2); initSlots(); } });
+
+        // ===== 레시피 =====
+        const recipes = {
+            "샐러드": { ingredients: ["양상추 한 줌","방울토마토 5~6개","오이 반 개","삶은 달걀 1개","드레싱 (취향껏)"], steps: ["채소를 깨끗이 씻어서 한입 크기로 자른다.","방울토마토는 반으로 자르고, 오이는 얇게 슬라이스한다.","삶은 달걀을 올리고 드레싱을 뿌려 완성!"] },
+            "갈비": { ingredients: ["돼지갈비(또는 소갈비) 500g","간장 4큰술","설탕 2큰술","다진 마늘 1큰술","참기름 1큰술","배즙 3큰술"], steps: ["갈비는 찬물에 30분 담가 핏물을 뺀다.","간장, 설탕, 마늘, 참기름, 배즙을 섞어 양념장을 만든다.","갈비에 양념장을 넣고 최소 2시간 재운다.","팬이나 그릴에서 중불로 앞뒤로 노릇하게 굽는다."] },
+            "피자": { ingredients: ["또띠아(또는 식빵)","토마토 소스","모짜렐라 치즈","원하는 토핑(페퍼로니, 올리브, 피망 등)"], steps: ["또띠아 위에 토마토 소스를 골고루 바른다.","치즈를 듬뿍 올리고 원하는 토핑을 얹는다.","에어프라이어 180도 5~7분 또는 오븐 200도 10분!"] },
+            "떡볶이": { ingredients: ["떡볶이 떡 300g","어묵 2장","고추장 2큰술","고춧가루 1큰술","설탕 1큰술","간장 1큰술","대파 약간"], steps: ["물 2컵을 끓인 후 고추장, 고춧가루, 설탕, 간장 넣어 양념장 만든다.","떡과 어묵을 넣고 중불에서 끓인다.","양념이 졸아들고 떡이 말랑해지면 대파 넣고 완성!"] },
+            "라면": { ingredients: ["라면 1봉지","물 550ml","달걀 1개","대파 약간"], steps: ["물을 끓인 후 스프와 면을 넣는다.","면이 거의 익으면 달걀을 톡 깨서 넣는다.","대파를 송송 썰어 올리면 완성!"] },
+            "김밥": { ingredients: ["밥 1공기","김 2장","단무지","시금치","당근","달걀","참기름, 소금 약간"], steps: ["밥에 참기름과 소금을 넣어 간한다.","시금치는 데쳐서 양념, 당근은 볶고, 달걀은 지단 부친다.","김 위에 밥을 펴고 재료 올린 뒤 돌돌 만다.","참기름 바르고 먹기 좋게 썰면 완성!"] },
+            "치킨": { ingredients: ["닭 1마리 또는 닭다리 500g","튀김가루 1컵","달걀 1개","소금, 후추","식용유"], steps: ["닭에 소금, 후추로 밑간한다.","달걀물 입힌 후 튀김가루를 골고루 묻힌다.","170도 기름에 7~8분 튀긴 후, 180도로 올려 2분 더 바삭하게!"] },
+            "잡채": { ingredients: ["당면 200g","시금치, 당근, 양파, 버섯","소고기 100g","간장 3큰술","설탕 1큰술","참기름 2큰술"], steps: ["당면을 삶아서 물기 빼고 적당히 자른다.","채소와 고기를 각각 볶아 준비한다.","당면과 재료를 모두 섞고 간장, 설탕, 참기름으로 양념!","잘 버무려서 접시에 담으면 완성!"] },
+            "집밥(엄마선택)": { ingredients: ["엄마의 사랑 ❤️","냉장고 속 재료들","비밀 양념"], steps: ["엄마에게 \"오늘 뭐 해줄 거야?\" 하고 물어본다.","엄마가 해주시는 대로 맛있게 먹는다.","설거지를 도와드리면 보너스 점수!"] },
+            "파스타": { ingredients: ["파스타면 200g","올리브오일 3큰술","마늘 3쪽","페퍼론치노(또는 고춧가루)","소금","파마산 치즈"], steps: ["파스타면을 소금 넣은 끓는 물에 알덴테로 삶는다.","팬에 올리브오일과 마늘, 페퍼론치노를 약불에서 볶는다.","삶은 면과 면수 2~3큰술을 넣고 잘 섞는다.","파마산 치즈를 뿌려 완성!"] },
+            "우동": { ingredients: ["우동면 2인분","가쓰오부시 한 줌","간장 2큰술","미림 1큰술","대파, 어묵 약간"], steps: ["물 3컵에 가쓰오부시 넣고 끓여 육수를 만든다.","간장, 미림으로 간을 맞춘다.","우동면을 넣고 2~3분 끓인다.","어묵과 대파를 올려 완성!"] },
+            "계란볶음밥": { ingredients: ["밥 1공기","달걀 2개","대파 약간","간장 1큰술","참기름 약간","소금, 후추"], steps: ["달걀을 풀어서 팬에 스크램블한 후 따로 둔다.","같은 팬에 기름 두르고 밥을 볶는다.","간장 넣고 섞은 후 스크램블을 다시 넣는다.","대파, 참기름 넣고 마무리!"] },
+            "짜장면": { ingredients: ["중화면 2인분","춘장 3큰술","돼지고기 100g","양파 1개","감자 반 개","호박 반 개"], steps: ["돼지고기와 채소를 깍둑 썬다.","팬에 기름 두르고 춘장을 볶아 기름기를 뺀다.","고기와 채소를 넣고 볶다가 물을 넣어 끓인다.","전분물로 농도 맞추고, 삶은 면 위에 올려 완성!"] },
+            "짬뽕": { ingredients: ["중화면 2인분","해물(오징어, 새우, 홍합)","양파, 당근, 청경채","고춧가루 2큰술","두반장 1큰술"], steps: ["팬에 기름 두르고 고춧가루, 두반장을 볶아 매운 기름을 만든다.","해물과 채소를 센 불에서 볶는다.","육수를 넣고 끓인다.","삶은 면 넣고 한소끔 더 끓이면 완성!"] },
+            "마라탕": { ingredients: ["마라 소스(또는 베이스)","각종 채소와 버섯","두부, 어묵, 분모자 등","면(당면 또는 라면사리)"], steps: ["냄비에 물을 끓이고 마라 소스를 풀어준다.","오래 걸리는 재료를 먼저 넣는다.","나머지 재료와 면을 넣고 끓인다.","취향에 맞게 간을 맞추면 완성!"] },
+            "돈까스": { ingredients: ["돼지 등심 2장","밀가루, 달걀, 빵가루","소금, 후추","식용유","돈까스 소스"], steps: ["돼지고기를 두드려 펴고 소금, 후추로 간한다.","밀가루 → 달걀물 → 빵가루 순으로 옷을 입힌다.","170도 기름에서 앞뒤로 노릇하게 튀긴다.","먹기 좋게 썰고 소스 뿌려 완성!"] },
+            "치킨텐더": { ingredients: ["닭 안심 300g","밀가루, 달걀, 빵가루(또는 콘플레이크)","소금, 후추, 파프리카 파우더","식용유"], steps: ["닭 안심에 소금, 후추, 파프리카 파우더로 밑간한다.","밀가루 → 달걀물 → 빵가루 순으로 묻힌다.","에어프라이어 180도 12분 또는 기름에 튀긴다.","케첩이나 허니머스타드와 함께!"] },
+        };
+
+        // ===== 배경 =====
+        function createFoodBackground() {
+            const ct = document.getElementById('foodBg'); ct.innerHTML = '';
+            const pool = [...menus.map(m => getEmoji(m)), "🍔","🍟","🌮","🍣","🥟","🍰","🧁","🍩","🥐","🍱","🌽","🥑","🍇","🍓","🫐"];
+            const cnt = window.innerWidth <= 580 ? 18 : 30;
+            for (let i = 0; i < cnt; i++) {
+                const e = document.createElement('div'); e.className = 'food-emoji'; e.textContent = pool[i % pool.length];
+                e.style.left = (Math.random()*95)+'%'; e.style.top = (Math.random()*95)+'%';
+                e.style.fontSize = (1.5+Math.random()*2.5)+'rem'; e.style.animationDuration = (4+Math.random()*6)+'s';
+                e.style.animationDelay = (Math.random()*5)+'s'; e.style.opacity = 0.12+Math.random()*0.18;
+                ct.appendChild(e);
+            }
+        }
+
+        // ===== 슬롯 =====
+        const REPEATS = 60;
+        function buildStrip(el) {
+            el.innerHTML = '';
+            for (let r = 0; r < REPEATS; r++) for (let i = 0; i < menus.length; i++) {
+                const it = document.createElement('div'); it.className = 'slot-item'; it.style.height = ITEM_HEIGHT+'px';
+                const es = document.createElement('span'); es.className = 'item-emoji'; es.textContent = getEmoji(menus[i]);
+                const ts = document.createElement('span'); ts.textContent = menus[i];
+                it.appendChild(es); it.appendChild(ts);
+                const c = colors[i % colors.length]; it.style.background = `linear-gradient(135deg,${c}44,${c}22)`; it.style.borderLeft = `3px solid ${c}`;
+                el.appendChild(it);
+            }
+        }
+        function initSlots() {
+            for (let s = 0; s < 3; s++) {
+                const strip = document.getElementById(`strip${s}`); buildStrip(strip);
+                const pos = -(Math.floor(Math.random()*menus.length)*ITEM_HEIGHT) - (menus.length*ITEM_HEIGHT*5) + CENTER_OFFSET;
+                strip.style.transform = `translateY(${pos}px)`; strip.dataset.currentPos = pos;
+            }
+        }
+        function normalizePos(pos) {
+            const ol = menus.length*ITEM_HEIGHT, sb = ol*10, off = ((-pos+CENTER_OFFSET)%ol+ol)%ol;
+            return -(off+sb)+CENTER_OFFSET;
+        }
+
+        // ===== 스핀 =====
+        function spin() {
+            if (spinning) return; spinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            if (soundEnabled) getAudioCtx();
+            hideExtras();
+
+            const rb = document.getElementById('resultBox'); rb.classList.remove('show'); rb.innerHTML = '돌아가는 중...';
+            document.getElementById('machine').classList.remove('jackpot-flash');
+
+            const ti = Math.floor(Math.random()*menus.length), ol = menus.length*ITEM_HEIGHT, sp = ol*3;
+            const bd = [1000,2600,4200], bdr = [1800,2000,2400];
+            let sc = 0; const st = performance.now();
+            startTickSound();
+
+            for (let s = 0; s < 3; s++) { const strip = document.getElementById(`strip${s}`); const np = normalizePos(parseFloat(strip.dataset.currentPos)); strip.style.transform = `translateY(${np}px)`; strip.dataset.currentPos = np; }
+
+            for (let s = 0; s < 3; s++) {
+                const strip = document.getElementById(`strip${s}`), spos = parseFloat(strip.dataset.currentPos);
+                (function run(si) {
+                    const dl = bd[si], dr = bdr[si];
+                    let brk = false, bsp = 0, bep = 0, bst = 0, lfp = spos;
+                    function tick(now) {
+                        const el = now - st;
+                        if (!brk && el < dl) { lfp = spos-(el/1000)*sp; strip.style.transform = `translateY(${lfp}px)`; requestAnimationFrame(tick); }
+                        else {
+                            if (!brk) { brk = true; bst = now; bsp = lfp; let ep = -(ti*ITEM_HEIGHT); while(ep > bsp-ol*2) ep -= ol; bep = ep+CENTER_OFFSET; }
+                            const pr = Math.min((now-bst)/dr,1), ea = 1-Math.pow(1-pr,3), ps = bsp+(bep-bsp)*ea;
+                            strip.style.transform = `translateY(${ps}px)`;
+                            if (si === sc) slowTickSound(pr*0.7+sc*0.1);
+                            if (pr < 1) requestAnimationFrame(tick);
+                            else { strip.style.transform = `translateY(${bep}px)`; strip.dataset.currentPos = bep; sc++; playStopDing(); if (sc === 3) { stopTickSound(); onAllStopped(ti); } }
+                        }
+                    }
+                    requestAnimationFrame(tick);
+                })(s);
+            }
+        }
+
+        function onAllStopped(mi) {
+            const rb = document.getElementById('resultBox');
+            currentSelectedMenu = menus[mi];
+            const em = getEmoji(currentSelectedMenu);
+            setTimeout(() => playFanfare(), 200);
+            setTimeout(() => playFireworks(), 350);
+            rb.classList.add('show');
+            rb.innerHTML = `${em} 오늘의 메뉴는 <span class="menu-name">&nbsp;${currentSelectedMenu}&nbsp;</span> ! ${em}`;
+            document.getElementById('machine').classList.add('jackpot-flash');
+            launchConfetti();
+            setTimeout(() => document.getElementById('nextBtn').classList.add('visible'), 1500);
+            spinning = false; document.getElementById('spinBtn').disabled = false;
+        }
+
+        // ===== 꽃가루 =====
+        function launchConfetti() {
+            const cl = ["#FFB3BA","#BAFFC9","#BAE1FF","#FFE4A1","#D4BAFF","#FFB3D9","#FF8FAB"], cnt = window.innerWidth<=580?50:80;
+            for (let i=0;i<cnt;i++) { const c=document.createElement("div"); c.className="confetti"; c.style.left=Math.random()*100+"vw"; c.style.top=-10+"px"; c.style.background=cl[Math.floor(Math.random()*cl.length)]; c.style.width=(6+Math.random()*10)+"px"; c.style.height=(6+Math.random()*10)+"px"; c.style.animationDuration=(2+Math.random()*3)+"s"; c.style.animationDelay=Math.random()*0.5+"s"; document.body.appendChild(c); setTimeout(()=>c.remove(),5500); }
+        }
+
+        // ===== UI 흐름 =====
+        function hideExtras() { document.getElementById('nextBtn').classList.remove('visible'); document.getElementById('choiceArea').classList.remove('show'); document.getElementById('recipeArea').classList.remove('show'); document.getElementById('recipeArea').innerHTML = ''; }
+        function showChoices() { document.getElementById('nextBtn').classList.remove('visible'); document.getElementById('choiceArea').classList.add('show'); }
+
+        function showRecipe() {
+            document.getElementById('choiceArea').classList.remove('show');
+            const r = recipes[currentSelectedMenu], em = getEmoji(currentSelectedMenu), a = document.getElementById('recipeArea');
+            if (!r) {
+                a.innerHTML = `<div class="recipe-header"><span class="recipe-emoji">${em}</span><div><div class="recipe-title">${currentSelectedMenu}</div><div class="recipe-subtitle">레시피 준비 중!</div></div></div><p style="color:#B08BBF;font-size:0.95rem;text-align:center;padding:20px 0;">아직 이 메뉴의 레시피가 등록되지 않았어!<br>코드에서 <b>recipes</b> 객체에 추가해줘 😊</p><button class="recipe-back-btn" onclick="backToChoices()">← 돌아가기</button>`;
+            } else {
+                a.innerHTML = `<div class="recipe-header"><span class="recipe-emoji">${em}</span><div><div class="recipe-title">${currentSelectedMenu}</div><div class="recipe-subtitle">오늘의 레시피</div></div></div><div class="recipe-section-title">📋 재료</div><ul class="recipe-list">${r.ingredients.map(i=>`<li>${i}</li>`).join('')}</ul><div class="recipe-section-title">👩‍🍳 만드는 법</div><ul class="recipe-list steps">${r.steps.map(s=>`<li>${s}</li>`).join('')}</ul><button class="recipe-back-btn" onclick="backToChoices()">← 돌아가기</button>`;
+            }
+            a.classList.add('show');
+            setTimeout(() => a.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+        }
+        function backToChoices() { document.getElementById('recipeArea').classList.remove('show'); document.getElementById('recipeArea').innerHTML = ''; document.getElementById('choiceArea').classList.add('show'); }
+
+        function searchNearby() {
+            const q = encodeURIComponent(currentSelectedMenu);
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) { window.location.href = `nmap://search?query=${q}&appname=oneul-mwo-meokji`; setTimeout(() => window.open(`https://map.naver.com/v5/search/${q}`, '_blank'), 1500); }
+            else window.open(`https://map.naver.com/v5/search/${q}`, '_blank');
+        }
+
+        // ===== 메뉴 편집 =====
+        function openModal() { document.getElementById("menuTextarea").value = menus.join("\n"); document.getElementById("modalOverlay").classList.add("active"); }
+        function closeModal() { document.getElementById("modalOverlay").classList.remove("active"); }
+        function saveMenus() { const nm = document.getElementById("menuTextarea").value.split("\n").map(s=>s.trim()).filter(s=>s.length>0); if(nm.length<2){alert("메뉴를 2개 이상 넣어줘!");return;} menus=nm; initSlots(); createFoodBackground(); closeModal(); }
+
+        initSlots(); createFoodBackground();
+    </script>
+</body>
+</html>
